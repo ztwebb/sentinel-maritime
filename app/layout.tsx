@@ -4,6 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Sentinel Maritime",
   description: "Maritime Intelligence Interface",
+  icons: { icon: "data:," },
 };
 
 export default function RootLayout({
