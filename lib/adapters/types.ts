@@ -51,7 +51,60 @@ export interface Chokepoint {
   geopoliticalContext: string;
 }
 
-export type SelectedEntityType = "vessel" | "port" | "chokepoint";
+export type ConflictEventType =
+  | "strike"
+  | "seizure"
+  | "mining"
+  | "interdiction"
+  | "protest"
+  | "unknown";
+
+export type ConflictSeverity = "low" | "medium" | "high" | "critical";
+
+export interface ConflictEvent {
+  id: string;
+  title: string;
+  lat: number;
+  lon: number;
+  date: string;
+  type: ConflictEventType;
+  severity: ConflictSeverity;
+  source: string;
+  description: string;
+  affectedRoutes?: string[];
+}
+
+export interface AisGapEvent {
+  id: string;
+  vesselId: string;
+  vesselName: string;
+  flag: string;
+  vesselType: VesselType;
+  gapStart: string;
+  gapEnd: string | null;
+  gapDurationHours: number | null;
+  lastKnownLat: number;
+  lastKnownLon: number;
+  reappearanceLat?: number;
+  reappearanceLon?: number;
+  displacementNm?: number;
+  suspicionScore: number;
+  context?: string;
+}
+
+export interface AisGapHotspot {
+  id: string;
+  label: string;
+  centerLat: number;
+  centerLon: number;
+  radiusNm: number;
+  eventCount: number;
+  avgSuspicionScore: number;
+  nearChokepoint?: string;
+  description?: string;
+}
+
+export type SelectedEntityType = "vessel" | "port" | "chokepoint" | "conflict" | "aisGap";
 
 export interface SelectedEntity {
   type: SelectedEntityType;

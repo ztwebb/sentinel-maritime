@@ -5,10 +5,12 @@ import type * as CesiumTypes from "cesium";
 import { useAppStore } from "@/store/useAppStore";
 import { getVessels, getPorts, getChokepoints } from "@/lib/adapters/mock-adapter";
 import { THEATERS } from "@/lib/theaters";
-import type { Vessel, Port, Chokepoint } from "@/lib/adapters/types";
+import type { Vessel, Port, Chokepoint, ConflictEvent } from "@/lib/adapters/types";
+import { mountConflictLayer, type ConflictEntityRecord } from "@/components/cesium/ConflictEventLayer";
+import { STRESS_INDEX, STRESS_LEVEL_HEX } from "@/lib/stress-index";
 
 // ——————————————————————————————————————————
-// Color palette — mirrors the Three.js prototype exactly
+// Color palette
 // ——————————————————————————————————————————
 
 const VESSEL_HEX: Record<string, string> = {
@@ -28,18 +30,19 @@ const PORT_HEX: Record<string, string> = {
   tier3:    "#0e7490",
 };
 
-const CHOKEPOINT_HEX = "#fbbf24";
-const SELECTED_HEX   = "#ffffff";
+// Chokepoint color is now driven by stress level; fall back to amber
+const CHOKEPOINT_FALLBACK_HEX = "#f59e0b";
+const SELECTED_HEX             = "#ffffff";
 
 // ——————————————————————————————————————————
 // Entity record — links a Cesium entity back to our app data
 // ——————————————————————————————————————————
 
-type EntityType = "vessel" | "port" | "chokepoint";
+type EntityType = "vessel" | "port" | "chokepoint" | "conflict";
 
 interface EntityRecord {
   type:    EntityType;
-  data:    Vessel | Port | Chokepoint;
+  data:    Vessel | Port | Chokepoint | ConflictEvent;
   baseHex: string;
   entity:  CesiumTypes.Entity;
 }
@@ -142,6 +145,7 @@ export default function CesiumViewer() {
       const vesselSource     = new Cesium.CustomDataSource("vessels");
       const portSource       = new Cesium.CustomDataSource("ports");
       const chokepointSource = new Cesium.CustomDataSource("chokepoints");
+      const conflictSource   = new Cesium.CustomDataSource("conflicts");
 
       // Map from entity.id → record for O(1) click lookup + highlight updates
       const entityMap = new Map<string, EntityRecord>();
@@ -194,10 +198,13 @@ export default function CesiumViewer() {
       }
 
       // ——————————————————
-      // Chokepoints — ring + central dot + label
+      // Chokepoints — ring + central dot + label, colored by stress level
       // ——————————————————
       for (const cp of getChokepoints()) {
-        const baseHex = CHOKEPOINT_HEX;
+        const stress  = STRESS_INDEX.get(cp.id);
+        const baseHex = stress
+          ? STRESS_LEVEL_HEX[stress.level]
+          : CHOKEPOINT_FALLBACK_HEX;
         const color   = Cesium.Color.fromCssColorString(baseHex);
 
         const entity = chokepointSource.entities.add({
@@ -240,15 +247,43 @@ export default function CesiumViewer() {
         });
       }
 
+      // ——————————————————
+      // Conflict events — pulsing severity-coded markers
+      // ——————————————————
+      const conflictCleanup = mountConflictLayer(
+        conflictSource,
+        entityMap as Map<string, ConflictEntityRecord>,
+        Cesium
+      );
+      cleanupFns.push(conflictCleanup);
+
+      // ——————————————————
+      // EEZ boundaries — GeoJsonDataSource (MultiLineString)
+      // ——————————————————
+      const eezSource = await Cesium.GeoJsonDataSource.load(
+        "/data/eez-boundaries.json",
+        {
+          stroke:      Cesium.Color.fromCssColorString("#4488aa").withAlpha(0.45),
+          strokeWidth: 1.2,
+          clampToGround: false,
+        }
+      );
+      eezSource.name = "eez";
+
       await viewer.dataSources.add(vesselSource);
       await viewer.dataSources.add(portSource);
       await viewer.dataSources.add(chokepointSource);
+      // Conflict source added before EEZ so EEZ lines render on top
+      await viewer.dataSources.add(conflictSource);
+      await viewer.dataSources.add(eezSource);
 
       // Apply initial layer visibility from store.
       const initLayers = useAppStore.getState().layers;
       vesselSource.show     = initLayers.vessels;
       portSource.show       = initLayers.ports;
       chokepointSource.show = initLayers.chokepoints;
+      conflictSource.show   = initLayers.conflicts;
+      eezSource.show        = initLayers.eez;
 
       // ——————————————————
       // Click handler
@@ -287,6 +322,8 @@ export default function CesiumViewer() {
           vesselSource.show     = lv.vessels;
           portSource.show       = lv.ports;
           chokepointSource.show = lv.chokepoints;
+          conflictSource.show   = lv.conflicts;
+          eezSource.show        = lv.eez;
         })
       );
 
@@ -374,6 +411,11 @@ function applyColor(
     if (entity.label) {
       entity.label.fillColor = new Cesium.ConstantProperty(color);
     }
+    if (entity.point) {
+      entity.point.color = new Cesium.ConstantProperty(color);
+    }
+  } else if (type === "conflict") {
+    // Only highlight the core dot; leave the pulse ring driven by its CallbackProperty
     if (entity.point) {
       entity.point.color = new Cesium.ConstantProperty(color);
     }

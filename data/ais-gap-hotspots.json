@@ -1,0 +1,68 @@
+[
+  {
+    "id": "hotspot-001",
+    "label": "Houthi Interdiction Corridor",
+    "centerLat": 13.8,
+    "centerLon": 43.2,
+    "radiusNm": 180,
+    "eventCount": 12,
+    "avgSuspicionScore": 74,
+    "nearChokepoint": "Bab-el-Mandeb",
+    "description": "Highest global concentration of AIS dark events in 2024. Houthi anti-ship operations have forced extensive AIS manipulation by commercial operators seeking to reduce targeting risk."
+  },
+  {
+    "id": "hotspot-002",
+    "label": "IRGC Shadow Fleet Area",
+    "centerLat": 26.5,
+    "centerLon": 55.9,
+    "radiusNm": 130,
+    "eventCount": 9,
+    "avgSuspicionScore": 81,
+    "nearChokepoint": "Strait of Hormuz",
+    "description": "Persistent cluster of AIS dark events associated with Iranian sanctions-evading crude transport. Vessels regularly disable AIS during IRGC-supervised ship-to-ship transfers at Qeshm Island anchorages."
+  },
+  {
+    "id": "hotspot-003",
+    "label": "Spratly Islands Dark Zone",
+    "centerLat": 10.2,
+    "centerLon": 114.6,
+    "radiusNm": 220,
+    "eventCount": 7,
+    "avgSuspicionScore": 66,
+    "nearChokepoint": "Strait of Malacca",
+    "description": "Chinese maritime militia vessels and PLA resupply missions routinely disable AIS in the Spratly Islands. Gap events in this zone are frequently misidentified as fishing vessels."
+  },
+  {
+    "id": "hotspot-004",
+    "label": "Taiwan Strait Exercise Zone",
+    "centerLat": 24.2,
+    "centerLon": 120.2,
+    "radiusNm": 150,
+    "eventCount": 5,
+    "avgSuspicionScore": 52,
+    "nearChokepoint": "Taiwan Strait",
+    "description": "Commercial vessels frequently disable AIS during PLA military exercise periods to reduce identification risk. Gap events cluster around exercise announcement dates."
+  },
+  {
+    "id": "hotspot-005",
+    "label": "Eastern Mediterranean Sanctions Route",
+    "centerLat": 33.8,
+    "centerLon": 34.2,
+    "radiusNm": 160,
+    "eventCount": 6,
+    "avgSuspicionScore": 57,
+    "nearChokepoint": "Suez Canal",
+    "description": "AIS dark events in this zone are associated with Iranian-linked vessels delivering fuel and equipment to Hezbollah networks via Lebanese and Syrian coastal approaches. Multiple vessels linked to OFAC-designated entities."
+  },
+  {
+    "id": "hotspot-006",
+    "label": "South China Sea Central",
+    "centerLat": 14.0,
+    "centerLon": 116.5,
+    "radiusNm": 240,
+    "eventCount": 8,
+    "avgSuspicionScore": 61,
+    "nearChokepoint": "Strait of Malacca",
+    "description": "Broad-area AIS dark zone in the central South China Sea. Mix of PLA intelligence-gathering vessels, commercial vessels avoiding Chinese surveillance, and flag-of-convenience tankers on non-declared routes."
+  }
+]

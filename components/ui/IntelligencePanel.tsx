@@ -1,13 +1,15 @@
 "use client";
 
 import { useAppStore } from "@/store/useAppStore";
-import type { Vessel, Port, Chokepoint } from "@/lib/adapters/types";
-import { getVessels, getPorts, getChokepoints } from "@/lib/adapters/mock-adapter";
+import type { Vessel, Port, Chokepoint, ConflictEvent } from "@/lib/adapters/types";
+import { getVessels, getPorts, getChokepoints, getConflictEvents } from "@/lib/adapters/mock-adapter";
 import { THEATERS, type TheaterPreset } from "@/lib/theaters";
+import { STRESS_INDEX, type StressLevel } from "@/lib/stress-index";
 
 const ALL_VESSELS = getVessels();
 const ALL_PORTS = getPorts();
 const ALL_CHOKEPOINTS = getChokepoints();
+const ALL_CONFLICTS = getConflictEvents();
 
 // ——————————————————————————————————————————
 // Sub-components
@@ -75,11 +77,12 @@ function EmptyState() {
       {/* Summary stats */}
       <div>
         <SectionLabel>TRACKED CONTACTS</SectionLabel>
-        <div className="grid grid-cols-3 gap-px bg-[#0f1e30]">
+        <div className="grid grid-cols-2 gap-px bg-[#0f1e30]">
           {[
             { label: "Vessels", value: ALL_VESSELS.length, color: "#22d3ee" },
             { label: "Ports", value: ALL_PORTS.length, color: "#00e5ff" },
             { label: "Chkpts", value: ALL_CHOKEPOINTS.length, color: "#f59e0b" },
+            { label: "Events", value: ALL_CONFLICTS.length, color: "#ef4444" },
           ].map(({ label, value, color }) => (
             <div key={label} className="bg-[#080f1c] px-3 py-2.5">
               <div className="text-[18px] font-bold" style={{ color }}>{value}</div>
@@ -93,6 +96,12 @@ function EmptyState() {
       <div>
         <SectionLabel>ATTENTION ITEMS</SectionLabel>
         <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2 py-1.5 border-b border-[#0f1e30]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444] flex-shrink-0" />
+            <span className="text-[10px] text-[#64748b]">
+              <span className="text-[#ef4444] font-semibold">{ALL_CONFLICTS.filter(e => e.severity === "critical").length}</span> critical events active
+            </span>
+          </div>
           <div className="flex items-center gap-2 py-1.5 border-b border-[#0f1e30]">
             <span className="w-1.5 h-1.5 rounded-full bg-[#64748b] flex-shrink-0" />
             <span className="text-[10px] text-[#64748b]">
@@ -228,15 +237,94 @@ function PortDetail({ port }: { port: Port }) {
 // Chokepoint detail
 // ——————————————————————————————————————————
 
+const STRESS_BADGE_COLOR: Record<StressLevel, "green" | "amber" | "orange" | "red"> = {
+  low:      "green",
+  elevated: "amber",
+  high:     "orange",
+  critical: "red",
+};
+
 function ChokepointDetail({ chokepoint }: { chokepoint: Chokepoint }) {
+  const stress = STRESS_INDEX.get(chokepoint.id);
+
   return (
     <div>
       <div className="mb-3">
         <div className="text-[13px] font-bold text-[#e2e8f0] mb-2 leading-tight">
           {chokepoint.name}
         </div>
-        <Badge label="STRATEGIC CHOKEPOINT" color="amber" />
+        <div className="flex gap-1.5 flex-wrap">
+          <Badge label="STRATEGIC CHOKEPOINT" color="amber" />
+          {stress && (
+            <Badge
+              label={`${stress.level.toUpperCase()} STRESS`}
+              color={STRESS_BADGE_COLOR[stress.level]}
+            />
+          )}
+        </div>
       </div>
+
+      {/* Stress index */}
+      {stress && (
+        <div className="mb-3 p-3 bg-[#060d18] border border-[#0f1e30]">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[9px] font-bold tracking-[0.15em] text-[#334155] uppercase">
+              Stress Index
+            </span>
+            <span
+              className="text-[20px] font-bold leading-none"
+              style={{ color: stress.level === "low" ? "#22c55e"
+                : stress.level === "elevated" ? "#f59e0b"
+                : stress.level === "high" ? "#f97316"
+                : "#ef4444" }}
+            >
+              {stress.score}
+            </span>
+          </div>
+
+          {/* Score bar */}
+          <div className="w-full h-1 bg-[#0f1e30] mb-3">
+            <div
+              className="h-full transition-all"
+              style={{
+                width: `${stress.score}%`,
+                backgroundColor: stress.level === "low" ? "#22c55e"
+                  : stress.level === "elevated" ? "#f59e0b"
+                  : stress.level === "high" ? "#f97316"
+                  : "#ef4444",
+              }}
+            />
+          </div>
+
+          {/* Rationale */}
+          <div className="flex flex-col gap-1">
+            {stress.rationale.map((r) => (
+              <div key={r} className="flex items-start gap-1.5">
+                <span className="text-[#334155] text-[10px] mt-px flex-shrink-0">›</span>
+                <span className="text-[10px] text-[#64748b]">{r}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Proximity counts */}
+      {stress && (
+        <div className="grid grid-cols-3 gap-px bg-[#0f1e30] mb-3">
+          {[
+            { label: "Vessels", value: stress.nearbyVesselCount, color: "#22d3ee" },
+            { label: "Events",  value: stress.nearbyConflictCount, color: "#ef4444" },
+            { label: "Dark",    value: stress.nearbyDarkCount, color: "#94a3b8" },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="bg-[#080f1c] px-2 py-2">
+              <div className="text-[16px] font-bold" style={{ color }}>{value}</div>
+              <div className="text-[8px] tracking-widest text-[#334155] mt-0.5">
+                {label.toUpperCase()}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <Row label="WIDTH" value={`${chokepoint.widthNm} nm`} />
       {chokepoint.annualTraffic && (
@@ -245,6 +333,9 @@ function ChokepointDetail({ chokepoint }: { chokepoint: Chokepoint }) {
       {chokepoint.oilFlowBpd ? (
         <Row label="OIL THROUGHPUT" value={`${(chokepoint.oilFlowBpd / 1_000_000).toFixed(1)}M bpd`} />
       ) : null}
+      {stress?.meanSpeedKnots !== null && stress?.meanSpeedKnots !== undefined && (
+        <Row label="MEAN SPEED" value={`${stress.meanSpeedKnots} kts`} />
+      )}
       <Row
         label="POSITION"
         value={`${Math.abs(chokepoint.lat).toFixed(2)}° ${chokepoint.lat >= 0 ? "N" : "S"} / ${Math.abs(chokepoint.lon).toFixed(2)}° ${chokepoint.lon >= 0 ? "E" : "W"}`}
@@ -254,6 +345,108 @@ function ChokepointDetail({ chokepoint }: { chokepoint: Chokepoint }) {
         <SectionLabel>GEOPOLITICAL CONTEXT</SectionLabel>
         <p className="text-[11px] text-[#64748b] leading-relaxed">
           {chokepoint.geopoliticalContext}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ——————————————————————————————————————————
+// Conflict event detail
+// ——————————————————————————————————————————
+
+const SEVERITY_COLOR: Record<ConflictEvent["severity"], "amber" | "orange" | "red"> = {
+  low:      "amber",
+  medium:   "amber",
+  high:     "orange",
+  critical: "red",
+};
+
+const SEVERITY_LABEL: Record<ConflictEvent["severity"], string> = {
+  low:      "LOW",
+  medium:   "MEDIUM",
+  high:     "HIGH",
+  critical: "CRITICAL",
+};
+
+const TYPE_LABEL: Record<ConflictEvent["type"], string> = {
+  strike:       "STRIKE",
+  seizure:      "VESSEL SEIZURE",
+  mining:       "MINING / IED",
+  interdiction: "INTERDICTION",
+  protest:      "DISRUPTION",
+  unknown:      "UNKNOWN",
+};
+
+function getConflictAssessment(ev: ConflictEvent): string {
+  if (ev.type === "strike") {
+    return ev.severity === "critical"
+      ? "Direct kinetic attack with confirmed casualties or vessel loss. Represents active threat to commercial freedom of navigation in this waterway. Requires elevated threat posture for all transiting vessels."
+      : "Hostile fire incident against commercial or naval vessel. Pattern of similar events indicates sustained interdiction campaign. Transit risk in this corridor is elevated.";
+  }
+  if (ev.type === "seizure") {
+    return "Vessel boardings and seizures represent grey-zone coercion — below the threshold of armed conflict but creating direct operational and commercial risk. Flag-state relationship and cargo are primary targeting factors.";
+  }
+  if (ev.type === "mining") {
+    return "Mine or limpet device use indicates deliberate targeting of maritime infrastructure. Route-clearance operations required before resuming normal traffic density. Adjacent anchorages should be treated as elevated risk.";
+  }
+  if (ev.type === "interdiction") {
+    return "Physical interference with freedom of navigation, including blockade, harassment, or military exercises that restrict commercial movement. Signals intentional territorial assertion or force demonstration.";
+  }
+  if (ev.type === "protest") {
+    return "Non-kinetic disruption with significant second-order effects on trade flow, insurance rates, and route economics. Monitor for escalation to direct action.";
+  }
+  return "Incident under assessment. Classification and attribution pending additional source reporting.";
+}
+
+function ConflictEventDetail({ event: ev }: { event: ConflictEvent }) {
+  const sevColor  = SEVERITY_COLOR[ev.severity];
+  const formattedDate = new Date(ev.date).toLocaleDateString("en-GB", {
+    day: "2-digit", month: "short", year: "numeric",
+  }).toUpperCase();
+
+  return (
+    <div>
+      <div className="mb-3">
+        <div className="text-[13px] font-bold text-[#e2e8f0] mb-2 leading-tight">
+          {ev.title}
+        </div>
+        <div className="flex gap-1.5 flex-wrap">
+          <Badge label={SEVERITY_LABEL[ev.severity]} color={sevColor} />
+          <Badge label={TYPE_LABEL[ev.type]} color="gray" />
+        </div>
+      </div>
+
+      <Row label="DATE" value={formattedDate} />
+      <Row
+        label="POSITION"
+        value={`${Math.abs(ev.lat).toFixed(2)}° ${ev.lat >= 0 ? "N" : "S"} / ${Math.abs(ev.lon).toFixed(2)}° ${ev.lon >= 0 ? "E" : "W"}`}
+      />
+      <Row label="SOURCE" value={ev.source} />
+
+      <div className="mt-3 mb-3">
+        <SectionLabel>INCIDENT REPORT</SectionLabel>
+        <p className="text-[11px] text-[#64748b] leading-relaxed">{ev.description}</p>
+      </div>
+
+      {ev.affectedRoutes && ev.affectedRoutes.length > 0 && (
+        <div className="mb-3">
+          <SectionLabel>AFFECTED ROUTES</SectionLabel>
+          <div className="flex flex-col gap-1">
+            {ev.affectedRoutes.map((route) => (
+              <div key={route} className="flex items-start gap-1.5 py-0.5">
+                <span className="text-[#f59e0b] text-[10px] mt-px flex-shrink-0">›</span>
+                <span className="text-[11px] text-[#64748b]">{route}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-3">
+        <SectionLabel>ASSESSMENT</SectionLabel>
+        <p className="text-[11px] text-[#64748b] leading-relaxed">
+          {getConflictAssessment(ev)}
         </p>
       </div>
     </div>
@@ -294,11 +487,12 @@ function TheaterPanel({ theater }: { theater: TheaterPreset }) {
       {/* Quick stats */}
       <div>
         <SectionLabel>TRACKED CONTACTS</SectionLabel>
-        <div className="grid grid-cols-3 gap-px bg-[#0f1e30]">
+        <div className="grid grid-cols-2 gap-px bg-[#0f1e30]">
           {[
             { label: "Vessels", value: ALL_VESSELS.length, color: "#22d3ee" },
             { label: "Ports", value: ALL_PORTS.length, color: "#00e5ff" },
             { label: "Chkpts", value: ALL_CHOKEPOINTS.length, color: "#f59e0b" },
+            { label: "Events", value: ALL_CONFLICTS.length, color: "#ef4444" },
           ].map(({ label, value, color }) => (
             <div key={label} className="bg-[#080f1c] px-3 py-2.5">
               <div className="text-[18px] font-bold" style={{ color }}>{value}</div>
@@ -312,6 +506,12 @@ function TheaterPanel({ theater }: { theater: TheaterPreset }) {
       <div>
         <SectionLabel>ATTENTION ITEMS</SectionLabel>
         <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2 py-1.5 border-b border-[#0f1e30]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444] flex-shrink-0" />
+            <span className="text-[10px] text-[#64748b]">
+              <span className="text-[#ef4444] font-semibold">{ALL_CONFLICTS.filter(e => e.severity === "critical").length}</span> critical events active
+            </span>
+          </div>
           <div className="flex items-center gap-2 py-1.5 border-b border-[#0f1e30]">
             <span className="w-1.5 h-1.5 rounded-full bg-[#64748b] flex-shrink-0" />
             <span className="text-[10px] text-[#64748b]">
@@ -349,7 +549,7 @@ export default function IntelligencePanel() {
 
   // Header label: entity type > theater name > default
   const headerLabel = selectedEntity
-    ? selectedEntity.type.toUpperCase()
+    ? selectedEntity.type === "conflict" ? "INCIDENT REPORT" : selectedEntity.type.toUpperCase()
     : activeTheater
     ? activeTheater.shortLabel
     : "INTELLIGENCE";
@@ -385,6 +585,9 @@ export default function IntelligencePanel() {
             )}
             {selectedEntity.type === "chokepoint" && (
               <ChokepointDetail chokepoint={selectedEntity.data as Chokepoint} />
+            )}
+            {selectedEntity.type === "conflict" && (
+              <ConflictEventDetail event={selectedEntity.data as ConflictEvent} />
             )}
           </div>
         ) : activeTheater ? (

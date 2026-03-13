@@ -1,14 +1,16 @@
 "use client";
 
 import { useAppStore } from "@/store/useAppStore";
-import { getVessels, getPorts, getChokepoints } from "@/lib/adapters/mock-adapter";
+import { getVessels, getPorts, getChokepoints, getConflictEvents, getAisGapEvents } from "@/lib/adapters/mock-adapter";
 import { THEATERS } from "@/lib/theaters";
 
-type Layer = "vessels" | "ports" | "chokepoints";
+type Layer = "vessels" | "ports" | "chokepoints" | "eez" | "conflicts" | "aisGaps";
 
 const VESSELS = getVessels();
 const PORTS = getPorts();
 const CHOKEPOINTS = getChokepoints();
+const CONFLICT_EVENTS = getConflictEvents();
+const AIS_GAPS = getAisGapEvents();
 
 const LAYER_CONFIG: {
   key: Layer;
@@ -38,6 +40,30 @@ const LAYER_CONFIG: {
     key: "chokepoints",
     label: "CHKPTS",
     count: CHOKEPOINTS.length,
+    dot: "bg-[#f59e0b]",
+    activeClass: "bg-[#f59e0b]/10 border-[#f59e0b]/60 text-[#f59e0b]",
+    inactiveClass: "border-[#1a2a40] text-[#334155] hover:border-[#f59e0b]/30 hover:text-[#f59e0b]/50",
+  },
+  {
+    key: "eez",
+    label: "EEZ",
+    count: 285,
+    dot: "bg-[#4488aa]",
+    activeClass: "bg-[#4488aa]/10 border-[#4488aa]/60 text-[#4488aa]",
+    inactiveClass: "border-[#1a2a40] text-[#334155] hover:border-[#4488aa]/30 hover:text-[#4488aa]/50",
+  },
+  {
+    key: "conflicts",
+    label: "EVENTS",
+    count: CONFLICT_EVENTS.length,
+    dot: "bg-[#ef4444]",
+    activeClass: "bg-[#ef4444]/10 border-[#ef4444]/60 text-[#ef4444]",
+    inactiveClass: "border-[#1a2a40] text-[#334155] hover:border-[#ef4444]/30 hover:text-[#ef4444]/50",
+  },
+  {
+    key: "aisGaps",
+    label: "AIS DARK",
+    count: AIS_GAPS.length,
     dot: "bg-[#f59e0b]",
     activeClass: "bg-[#f59e0b]/10 border-[#f59e0b]/60 text-[#f59e0b]",
     inactiveClass: "border-[#1a2a40] text-[#334155] hover:border-[#f59e0b]/30 hover:text-[#f59e0b]/50",

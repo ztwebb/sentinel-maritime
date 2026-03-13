@@ -1,16 +1,21 @@
 import { create } from "zustand";
-import type { Vessel, Port, Chokepoint, SelectedEntityType } from "@/lib/adapters/types";
+import type { Vessel, Port, Chokepoint, ConflictEvent, AisGapEvent, SelectedEntityType } from "@/lib/adapters/types";
 
 interface LayerState {
   vessels: boolean;
   ports: boolean;
   chokepoints: boolean;
+  eez: boolean;
+  conflicts: boolean;
+  aisGaps: boolean;
 }
 
 type SelectedEntity =
   | { type: "vessel"; data: Vessel }
   | { type: "port"; data: Port }
   | { type: "chokepoint"; data: Chokepoint }
+  | { type: "conflict"; data: ConflictEvent }
+  | { type: "aisGap"; data: AisGapEvent }
   | null;
 
 interface AppState {
@@ -18,7 +23,7 @@ interface AppState {
   toggleLayer: (layer: keyof LayerState) => void;
 
   selectedEntity: SelectedEntity;
-  selectEntity: (type: SelectedEntityType, data: Vessel | Port | Chokepoint) => void;
+  selectEntity: (type: SelectedEntityType, data: Vessel | Port | Chokepoint | ConflictEvent | AisGapEvent) => void;
   clearSelection: () => void;
 
   selectedTheaterId: string | null;
@@ -30,6 +35,9 @@ export const useAppStore = create<AppState>((set) => ({
     vessels: true,
     ports: true,
     chokepoints: true,
+    eez: false,
+    conflicts: true,
+    aisGaps: true,
   },
 
   toggleLayer: (layer) =>
