@@ -15,7 +15,7 @@ const ALL_CHOKEPOINTS = getChokepoints();
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="text-[9px] font-bold tracking-[0.15em] text-[#334155] uppercase mb-1.5">
+    <div className="text-[8px] font-bold tracking-[0.2em] text-[#3b5068] uppercase mb-2">
       {children}
     </div>
   );
@@ -23,13 +23,17 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex justify-between items-start gap-2 py-1.5 border-b border-[#0f1e30]">
-      <span className="text-[9px] font-semibold tracking-[0.1em] text-[#334155] uppercase whitespace-nowrap">
+    <div className="flex justify-between items-baseline gap-3 py-[6px]">
+      <span className="text-[8px] font-semibold tracking-[0.12em] text-[#3b5068] uppercase whitespace-nowrap">
         {label}
       </span>
-      <span className="text-[11px] text-[#94a3b8] text-right break-words">{value}</span>
+      <span className="text-[11px] text-[#c8d6e5] text-right font-medium tabular-nums">{value}</span>
     </div>
   );
+}
+
+function Divider() {
+  return <div className="h-px bg-gradient-to-r from-transparent via-[#1a2d44] to-transparent my-1" />;
 }
 
 function Badge({
@@ -40,19 +44,30 @@ function Badge({
   color: "cyan" | "amber" | "red" | "green" | "orange" | "gray";
 }) {
   const colorMap = {
-    cyan:   "border-[#22d3ee]/60 text-[#22d3ee] bg-[#22d3ee]/5",
-    amber:  "border-[#f59e0b]/60 text-[#f59e0b] bg-[#f59e0b]/5",
-    red:    "border-[#f87171]/60 text-[#f87171] bg-[#f87171]/5",
-    green:  "border-[#4ade80]/60 text-[#4ade80] bg-[#4ade80]/5",
-    orange: "border-[#ff7a40]/60 text-[#ff7a40] bg-[#ff7a40]/5",
-    gray:   "border-[#334155] text-[#64748b]",
+    cyan:   "border-[#22d3ee]/40 text-[#22d3ee] bg-[#22d3ee]/8",
+    amber:  "border-[#f59e0b]/40 text-[#f59e0b] bg-[#f59e0b]/8",
+    red:    "border-[#f87171]/40 text-[#f87171] bg-[#f87171]/8",
+    green:  "border-[#4ade80]/40 text-[#4ade80] bg-[#4ade80]/8",
+    orange: "border-[#ff7a40]/40 text-[#ff7a40] bg-[#ff7a40]/8",
+    gray:   "border-[#2a3f55] text-[#64748b] bg-[#1a2a40]/40",
   };
   return (
     <span
-      className={`inline-block border px-1.5 py-0.5 text-[9px] font-bold tracking-[0.1em] ${colorMap[color]}`}
+      className={`inline-block border rounded-sm px-1.5 py-[2px] text-[8px] font-bold tracking-[0.12em] ${colorMap[color]}`}
     >
       {label}
     </span>
+  );
+}
+
+function StatCard({ value, label, color }: { value: number; label: string; color: string }) {
+  return (
+    <div className="flex flex-col items-center py-2 px-1">
+      <div className="text-[20px] font-black tracking-tight leading-none" style={{ color }}>
+        {value.toLocaleString()}
+      </div>
+      <div className="text-[7px] tracking-[0.2em] text-[#3b5068] mt-1 font-semibold">{label}</div>
+    </div>
   );
 }
 
@@ -66,53 +81,42 @@ function EmptyState() {
   const tier1Ports = ALL_PORTS.filter((p) => p.strategicTier === 1).length;
 
   return (
-    <div className="px-4 py-4 flex flex-col gap-5">
-      {/* Instruction */}
-      <p className="text-[10px] text-[#334155] leading-relaxed">
-        Select a vessel, port, or chokepoint on the globe for intelligence detail.
+    <div className="px-4 py-5 flex flex-col gap-5">
+      {/* Stats row */}
+      <div>
+        <SectionLabel>GLOBAL OVERVIEW</SectionLabel>
+        <div className="grid grid-cols-3 divide-x divide-[#1a2d44] bg-[#0a1220] rounded border border-[#1a2d44]/60">
+          <StatCard value={ALL_VESSELS.length} label="VESSELS" color="#22d3ee" />
+          <StatCard value={ALL_PORTS.length} label="PORTS" color="#00e5ff" />
+          <StatCard value={ALL_CHOKEPOINTS.length} label="CHKPTS" color="#f59e0b" />
+        </div>
+      </div>
+
+      {/* Alerts */}
+      <div>
+        <SectionLabel>ALERTS</SectionLabel>
+        <div className="flex flex-col gap-[2px]">
+          <div className="flex items-center gap-2.5 py-2 px-3 bg-[#0a1220] rounded-sm border-l-2 border-[#f87171]/60">
+            <span className="text-[10px] text-[#8899aa]">
+              <span className="text-[#f87171] font-bold">{darkCount}</span> AIS-dark
+            </span>
+          </div>
+          <div className="flex items-center gap-2.5 py-2 px-3 bg-[#0a1220] rounded-sm border-l-2 border-[#f87171]/40">
+            <span className="text-[10px] text-[#8899aa]">
+              <span className="text-[#f87171] font-bold">{militaryCount}</span> military tracked
+            </span>
+          </div>
+          <div className="flex items-center gap-2.5 py-2 px-3 bg-[#0a1220] rounded-sm border-l-2 border-[#22d3ee]/40">
+            <span className="text-[10px] text-[#8899aa]">
+              <span className="text-[#22d3ee] font-bold">{tier1Ports}</span> Tier 1 ports active
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <p className="text-[9px] text-[#2a3f55] leading-relaxed text-center">
+        Select any entity for intel detail
       </p>
-
-      {/* Summary stats */}
-      <div>
-        <SectionLabel>TRACKED CONTACTS</SectionLabel>
-        <div className="grid grid-cols-3 gap-px bg-[#0f1e30]">
-          {[
-            { label: "Vessels", value: ALL_VESSELS.length, color: "#22d3ee" },
-            { label: "Ports", value: ALL_PORTS.length, color: "#00e5ff" },
-            { label: "Chkpts", value: ALL_CHOKEPOINTS.length, color: "#f59e0b" },
-          ].map(({ label, value, color }) => (
-            <div key={label} className="bg-[#080f1c] px-3 py-2.5">
-              <div className="text-[18px] font-bold" style={{ color }}>{value}</div>
-              <div className="text-[9px] tracking-widest text-[#334155] mt-0.5">{label.toUpperCase()}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Attention items */}
-      <div>
-        <SectionLabel>ATTENTION ITEMS</SectionLabel>
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2 py-1.5 border-b border-[#0f1e30]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#64748b] flex-shrink-0" />
-            <span className="text-[10px] text-[#64748b]">
-              <span className="text-[#f87171] font-semibold">{darkCount}</span> vessels currently AIS-dark
-            </span>
-          </div>
-          <div className="flex items-center gap-2 py-1.5 border-b border-[#0f1e30]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#64748b] flex-shrink-0" />
-            <span className="text-[10px] text-[#64748b]">
-              <span className="text-[#f87171] font-semibold">{militaryCount}</span> military vessels tracked
-            </span>
-          </div>
-          <div className="flex items-center gap-2 py-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#64748b] flex-shrink-0" />
-            <span className="text-[10px] text-[#64748b]">
-              <span className="text-[#22d3ee] font-semibold">{tier1Ports}</span> Tier 1 strategic ports active
-            </span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
@@ -151,31 +155,33 @@ function VesselDetail({ vessel }: { vessel: Vessel }) {
 
   return (
     <div>
-      <div className="mb-3">
-        <div className="text-[13px] font-bold text-[#e2e8f0] mb-2 leading-tight">
+      <div className="mb-4">
+        <div className="text-[14px] font-black text-[#e2e8f0] mb-2 tracking-tight leading-tight">
           {vessel.name}
         </div>
         <div className="flex gap-1.5 flex-wrap">
           <Badge label={vessel.type.toUpperCase()} color={typeColor[vessel.type] ?? "gray"} />
           <Badge label={vessel.status.toUpperCase()} color={statusColor[vessel.status] ?? "gray"} />
-          <Badge label={`FLAG: ${vessel.flag}`} color="gray" />
+          <Badge label={vessel.flag} color="gray" />
         </div>
       </div>
 
+      <Divider />
       <Row label="MMSI" value={vessel.mmsi} />
       <Row
-        label="POSITION"
-        value={`${Math.abs(vessel.lat).toFixed(3)}° ${vessel.lat >= 0 ? "N" : "S"} / ${Math.abs(vessel.lon).toFixed(3)}° ${vessel.lon >= 0 ? "E" : "W"}`}
+        label="POS"
+        value={`${Math.abs(vessel.lat).toFixed(3)}\u00b0${vessel.lat >= 0 ? "N" : "S"} ${Math.abs(vessel.lon).toFixed(3)}\u00b0${vessel.lon >= 0 ? "E" : "W"}`}
       />
-      <Row label="HEADING" value={`${vessel.heading}°`} />
-      <Row label="SPEED" value={vessel.status === "dark" ? "—" : `${vessel.speed.toFixed(1)} kts`} />
-      {vessel.destination && <Row label="DESTINATION" value={vessel.destination} />}
-      {vessel.length && <Row label="LENGTH" value={`${vessel.length} m`} />}
-      <Row label="LAST SEEN" value={lastSeenStr} />
+      <Row label="HDG" value={`${vessel.heading}\u00b0`} />
+      <Row label="SPD" value={vessel.status === "dark" ? "\u2014" : `${vessel.speed.toFixed(1)} kn`} />
+      {vessel.destination && <Row label="DEST" value={vessel.destination} />}
+      {vessel.length && <Row label="LOA" value={`${vessel.length}m`} />}
+      <Row label="LAST" value={lastSeenStr} />
+      <Divider />
 
-      <div className="mt-4">
+      <div className="mt-3">
         <SectionLabel>ASSESSMENT</SectionLabel>
-        <p className="text-[11px] text-[#64748b] leading-relaxed">
+        <p className="text-[10px] text-[#6b829a] leading-[1.6]">
           {getVesselContext(vessel)}
         </p>
       </div>
@@ -195,29 +201,31 @@ function PortDetail({ port }: { port: Port }) {
 
   return (
     <div>
-      <div className="mb-3">
-        <div className="text-[13px] font-bold text-[#e2e8f0] mb-2 leading-tight">
+      <div className="mb-4">
+        <div className="text-[14px] font-black text-[#e2e8f0] mb-2 tracking-tight leading-tight">
           {port.name}
         </div>
         <div className="flex gap-1.5 flex-wrap">
-          <Badge label={`TIER ${port.strategicTier}`} color={tierColor[port.strategicTier]} />
+          <Badge label={`T${port.strategicTier}`} color={tierColor[port.strategicTier]} />
           <Badge label={port.type.replace("-", " ").toUpperCase()} color={typeColor[port.type] ?? "gray"} />
           <Badge label={port.country.toUpperCase()} color="gray" />
         </div>
       </div>
 
+      <Divider />
       <Row
-        label="POSITION"
-        value={`${Math.abs(port.lat).toFixed(3)}° ${port.lat >= 0 ? "N" : "S"} / ${Math.abs(port.lon).toFixed(3)}° ${port.lon >= 0 ? "E" : "W"}`}
+        label="POS"
+        value={`${Math.abs(port.lat).toFixed(3)}\u00b0${port.lat >= 0 ? "N" : "S"} ${Math.abs(port.lon).toFixed(3)}\u00b0${port.lon >= 0 ? "E" : "W"}`}
       />
       {port.throughput ? (
-        <Row label="THROUGHPUT" value={`${(port.throughput / 1_000_000).toFixed(1)}M TEU/yr`} />
+        <Row label="TPT" value={`${(port.throughput / 1_000_000).toFixed(1)}M TEU/yr`} />
       ) : null}
+      <Divider />
 
       {port.notes && (
-        <div className="mt-4">
+        <div className="mt-3">
           <SectionLabel>STRATEGIC SIGNIFICANCE</SectionLabel>
-          <p className="text-[11px] text-[#64748b] leading-relaxed">{port.notes}</p>
+          <p className="text-[10px] text-[#6b829a] leading-[1.6]">{port.notes}</p>
         </div>
       )}
     </div>
@@ -231,28 +239,30 @@ function PortDetail({ port }: { port: Port }) {
 function ChokepointDetail({ chokepoint }: { chokepoint: Chokepoint }) {
   return (
     <div>
-      <div className="mb-3">
-        <div className="text-[13px] font-bold text-[#e2e8f0] mb-2 leading-tight">
+      <div className="mb-4">
+        <div className="text-[14px] font-black text-[#e2e8f0] mb-2 tracking-tight leading-tight">
           {chokepoint.name}
         </div>
         <Badge label="STRATEGIC CHOKEPOINT" color="amber" />
       </div>
 
+      <Divider />
       <Row label="WIDTH" value={`${chokepoint.widthNm} nm`} />
       {chokepoint.annualTraffic && (
-        <Row label="ANNUAL TRAFFIC" value={`~${chokepoint.annualTraffic.toLocaleString()} vessels`} />
+        <Row label="TRAFFIC" value={`~${chokepoint.annualTraffic.toLocaleString()} /yr`} />
       )}
       {chokepoint.oilFlowBpd ? (
-        <Row label="OIL THROUGHPUT" value={`${(chokepoint.oilFlowBpd / 1_000_000).toFixed(1)}M bpd`} />
+        <Row label="OIL" value={`${(chokepoint.oilFlowBpd / 1_000_000).toFixed(1)}M bpd`} />
       ) : null}
       <Row
-        label="POSITION"
-        value={`${Math.abs(chokepoint.lat).toFixed(2)}° ${chokepoint.lat >= 0 ? "N" : "S"} / ${Math.abs(chokepoint.lon).toFixed(2)}° ${chokepoint.lon >= 0 ? "E" : "W"}`}
+        label="POS"
+        value={`${Math.abs(chokepoint.lat).toFixed(2)}\u00b0${chokepoint.lat >= 0 ? "N" : "S"} ${Math.abs(chokepoint.lon).toFixed(2)}\u00b0${chokepoint.lon >= 0 ? "E" : "W"}`}
       />
+      <Divider />
 
-      <div className="mt-4">
+      <div className="mt-3">
         <SectionLabel>GEOPOLITICAL CONTEXT</SectionLabel>
-        <p className="text-[11px] text-[#64748b] leading-relaxed">
+        <p className="text-[10px] text-[#6b829a] leading-[1.6]">
           {chokepoint.geopoliticalContext}
         </p>
       </div>
@@ -270,66 +280,53 @@ function TheaterPanel({ theater }: { theater: TheaterPreset }) {
   const militaryCount = ALL_VESSELS.filter((v) => v.type === "military").length;
 
   return (
-    <div className="px-4 py-4 flex flex-col gap-4">
+    <div className="px-4 py-5 flex flex-col gap-5">
       {/* Theater name + dismiss */}
       <div className="flex items-start justify-between gap-2">
         <div>
-          <div className="text-[8px] tracking-[0.18em] text-[#f59e0b] font-bold mb-1">THEATER</div>
-          <div className="text-[13px] font-bold text-[#e2e8f0] leading-tight">{theater.label}</div>
+          <div className="text-[7px] tracking-[0.25em] text-[#f59e0b]/80 font-bold mb-1">THEATER</div>
+          <div className="text-[14px] font-black text-[#e2e8f0] tracking-tight leading-tight">{theater.label}</div>
         </div>
         <button
           onClick={() => setTheater(null)}
-          className="text-[9px] tracking-widest text-[#334155] hover:text-[#64748b] transition-colors flex-shrink-0 mt-0.5"
+          className="text-[8px] tracking-widest text-[#3b5068] hover:text-[#64748b] transition-colors flex-shrink-0 mt-1 cursor-pointer"
         >
-          CLEAR ×
+          DISMISS
         </button>
       </div>
 
       {/* Regional assessment */}
       <div>
-        <SectionLabel>REGIONAL ASSESSMENT</SectionLabel>
-        <p className="text-[11px] text-[#64748b] leading-relaxed">{theater.summary}</p>
+        <SectionLabel>ASSESSMENT</SectionLabel>
+        <p className="text-[10px] text-[#6b829a] leading-[1.6]">{theater.summary}</p>
       </div>
 
-      {/* Quick stats */}
+      {/* Stats */}
       <div>
-        <SectionLabel>TRACKED CONTACTS</SectionLabel>
-        <div className="grid grid-cols-3 gap-px bg-[#0f1e30]">
-          {[
-            { label: "Vessels", value: ALL_VESSELS.length, color: "#22d3ee" },
-            { label: "Ports", value: ALL_PORTS.length, color: "#00e5ff" },
-            { label: "Chkpts", value: ALL_CHOKEPOINTS.length, color: "#f59e0b" },
-          ].map(({ label, value, color }) => (
-            <div key={label} className="bg-[#080f1c] px-3 py-2.5">
-              <div className="text-[18px] font-bold" style={{ color }}>{value}</div>
-              <div className="text-[9px] tracking-widest text-[#334155] mt-0.5">{label.toUpperCase()}</div>
-            </div>
-          ))}
+        <SectionLabel>TRACKED</SectionLabel>
+        <div className="grid grid-cols-3 divide-x divide-[#1a2d44] bg-[#0a1220] rounded border border-[#1a2d44]/60">
+          <StatCard value={ALL_VESSELS.length} label="VESSELS" color="#22d3ee" />
+          <StatCard value={ALL_PORTS.length} label="PORTS" color="#00e5ff" />
+          <StatCard value={ALL_CHOKEPOINTS.length} label="CHKPTS" color="#f59e0b" />
         </div>
       </div>
 
-      {/* Attention items */}
+      {/* Alerts */}
       <div>
-        <SectionLabel>ATTENTION ITEMS</SectionLabel>
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2 py-1.5 border-b border-[#0f1e30]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#64748b] flex-shrink-0" />
-            <span className="text-[10px] text-[#64748b]">
-              <span className="text-[#f87171] font-semibold">{darkCount}</span> vessels currently AIS-dark
+        <SectionLabel>ALERTS</SectionLabel>
+        <div className="flex flex-col gap-[2px]">
+          <div className="flex items-center py-2 px-3 bg-[#0a1220] rounded-sm border-l-2 border-[#f87171]/60">
+            <span className="text-[10px] text-[#8899aa]">
+              <span className="text-[#f87171] font-bold">{darkCount}</span> AIS-dark
             </span>
           </div>
-          <div className="flex items-center gap-2 py-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#64748b] flex-shrink-0" />
-            <span className="text-[10px] text-[#64748b]">
-              <span className="text-[#f87171] font-semibold">{militaryCount}</span> military vessels tracked
+          <div className="flex items-center py-2 px-3 bg-[#0a1220] rounded-sm border-l-2 border-[#f87171]/40">
+            <span className="text-[10px] text-[#8899aa]">
+              <span className="text-[#f87171] font-bold">{militaryCount}</span> military tracked
             </span>
           </div>
         </div>
       </div>
-
-      <p className="text-[10px] text-[#1e3a5a] leading-relaxed">
-        Select a vessel, port, or chokepoint for detailed intelligence.
-      </p>
     </div>
   );
 }
@@ -347,7 +344,6 @@ export default function IntelligencePanel() {
     ? THEATERS.find((t) => t.id === selectedTheaterId) ?? null
     : null;
 
-  // Header label: entity type > theater name > default
   const headerLabel = selectedEntity
     ? selectedEntity.type.toUpperCase()
     : activeTheater
@@ -355,20 +351,21 @@ export default function IntelligencePanel() {
     : "INTELLIGENCE";
 
   return (
-    <div className="absolute top-0 right-0 bottom-0 w-[300px] bg-[#060d18]/92 border-l border-[#0f1e30] backdrop-blur-sm flex flex-col">
+    <div className="absolute top-0 right-0 bottom-0 w-[280px] bg-[#040a14]/95 border-l border-[#1a2d44]/50 backdrop-blur-md flex flex-col">
       {/* Header */}
-      <div className="px-4 py-2.5 border-b border-[#0f1e30] flex items-center justify-between flex-shrink-0">
+      <div className="px-4 py-3 border-b border-[#1a2d44]/50 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-[9px] font-bold tracking-[0.15em] text-[#334155]">
+          <div className="w-1 h-1 rounded-full bg-[#22d3ee] animate-pulse" />
+          <span className="text-[8px] font-bold tracking-[0.2em] text-[#4a6a88]">
             {headerLabel}
           </span>
         </div>
         {selectedEntity && (
           <button
             onClick={clearSelection}
-            className="text-[9px] tracking-widest text-[#334155] hover:text-[#64748b] transition-colors"
+            className="text-[8px] tracking-widest text-[#3b5068] hover:text-[#64748b] transition-colors cursor-pointer"
           >
-            CLEAR ×
+            CLOSE
           </button>
         )}
       </div>
@@ -376,7 +373,7 @@ export default function IntelligencePanel() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto min-h-0">
         {selectedEntity ? (
-          <div className="px-4 py-3">
+          <div className="px-4 py-4">
             {selectedEntity.type === "vessel" && (
               <VesselDetail vessel={selectedEntity.data as Vessel} />
             )}
@@ -395,11 +392,11 @@ export default function IntelligencePanel() {
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-2 border-t border-[#0f1e30] flex items-center justify-between flex-shrink-0">
-        <span className="text-[9px] tracking-widest text-[#1a2a3a]">
-          MOCK / UNCLASSIFIED
+      <div className="px-4 py-2 border-t border-[#1a2d44]/30 flex items-center justify-between flex-shrink-0">
+        <span className="text-[7px] tracking-[0.2em] text-[#1a2d44] font-semibold">
+          UNCLASSIFIED
         </span>
-        <span className="text-[9px] tracking-widest text-[#1a2a3a]">
+        <span className="text-[7px] tracking-[0.2em] text-[#1a2d44] font-semibold">
           SMC-1
         </span>
       </div>
