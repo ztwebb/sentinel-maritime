@@ -77,8 +77,8 @@ export default function CesiumViewer() {
         document.head.appendChild(link);
       }
 
-      // Disable Cesium ion — we use open imagery, no token required.
-      Cesium.Ion.defaultAccessToken = "";
+      // Disable Cesium Ion completely — we use open imagery, no token required.
+      Cesium.Ion.defaultAccessToken = undefined as unknown as string;
 
       // ——————————————————
       // Create Viewer
@@ -94,6 +94,18 @@ export default function CesiumViewer() {
         selectionIndicator:  false,
         timeline:            false,
         navigationHelpButton: false,
+        // Provide our own base layer so Cesium never contacts Ion for imagery.
+        baseLayer: new Cesium.ImageryLayer(
+          new Cesium.UrlTemplateImageryProvider({
+            url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+            credit:       "Esri, HERE, Garmin, © OpenStreetMap contributors",
+            tileWidth:    256,
+            tileHeight:   256,
+            minimumLevel: 0,
+            maximumLevel: 16,
+          })
+        ),
+        terrain: new Cesium.Terrain(new Cesium.EllipsoidTerrainProvider()),
         // Route credits to a detached element so they don't appear in the UI.
         creditContainer: Object.assign(document.createElement("div"), {
           style: "display:none",
@@ -101,31 +113,37 @@ export default function CesiumViewer() {
       });
 
       // ——————————————————
-      // Imagery — ESRI Dark Gray Canvas (free, no key)
-      // ——————————————————
-      viewer.imageryLayers.removeAll();
-      viewer.imageryLayers.addImageryProvider(
-        new Cesium.UrlTemplateImageryProvider({
-          url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
-          credit:       "Esri, HERE, Garmin, © OpenStreetMap contributors",
-          tileWidth:    256,
-          tileHeight:   256,
-          minimumLevel: 0,
-          maximumLevel: 16,
-        })
-      );
-
-      // ——————————————————
-      // Scene styling
+      // Scene styling & performance
       // ——————————————————
       const scene = viewer.scene;
       if (scene.skyBox)          scene.skyBox.show          = false;
       if (scene.sun)             scene.sun.show             = false;
       if (scene.moon)            scene.moon.show            = false;
-      if (scene.skyAtmosphere)   scene.skyAtmosphere.show   = true;
-      scene.backgroundColor                                 = Cesium.Color.fromCssColorString("#060a10");
-      scene.globe.baseColor                                 = Cesium.Color.fromCssColorString("#060a10");
-      scene.globe.showGroundAtmosphere                      = false;
+
+      // Atmosphere — the glow around the globe edge.
+      if (scene.skyAtmosphere) {
+        scene.skyAtmosphere.show = true;
+        scene.skyAtmosphere.hueShift             = -0.05;
+        scene.skyAtmosphere.saturationShift       = -0.4;
+        scene.skyAtmosphere.brightnessShift        = -0.35;
+      }
+
+      scene.backgroundColor = Cesium.Color.fromCssColorString("#020408");
+      scene.globe.baseColor  = Cesium.Color.fromCssColorString("#060a10");
+      scene.globe.showGroundAtmosphere = true;
+      scene.globe.enableLighting       = true;
+
+      // Subtle glow on the globe surface.
+      scene.globe.atmosphereLightIntensity   = 8.0;
+      scene.globe.atmosphereRayleighScaleHeight = 10000;
+
+      // Only re-render when the camera moves or data changes — huge perf win.
+      viewer.scene.requestRenderMode = true;
+      viewer.scene.maximumRenderTimeChange = Infinity;
+
+      // Reduce tile loading pressure.
+      viewer.scene.globe.maximumScreenSpaceError = 4;
+      viewer.scene.fxaa = true;
 
       // ——————————————————
       // Initial camera — Indian Ocean / Middle East hemisphere
@@ -167,7 +185,6 @@ export default function CesiumViewer() {
             color:           Cesium.Color.fromCssColorString(baseHex),
             outlineColor:    Cesium.Color.BLACK.withAlpha(0.6),
             outlineWidth:    1,
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
           }),
         });
         entityMap.set(entity.id, { type: "vessel", data: v, baseHex, entity });
@@ -191,7 +208,6 @@ export default function CesiumViewer() {
             color:           Cesium.Color.fromCssColorString(baseHex),
             outlineColor:    Cesium.Color.BLACK.withAlpha(0.6),
             outlineWidth:    1,
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
           }),
         });
         entityMap.set(entity.id, { type: "port", data: p, baseHex, entity });
@@ -213,16 +229,15 @@ export default function CesiumViewer() {
           ellipse: new Cesium.EllipseGraphics({
             semiMinorAxis:   80_000,
             semiMajorAxis:   80_000,
+            height:          0,
             fill:            false,
             outline:         true,
             outlineColor:    color,
             outlineWidth:    2,
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
           }),
           point: new Cesium.PointGraphics({
             pixelSize:       5,
             color:           color,
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
           }),
           label: new Cesium.LabelGraphics({
             text:            cp.name.toUpperCase(),
@@ -232,7 +247,6 @@ export default function CesiumViewer() {
             outlineWidth:    2,
             style:           Cesium.LabelStyle.FILL_AND_OUTLINE,
             pixelOffset:     new Cesium.Cartesian2(0, -60),
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
             distanceDisplayCondition: new Cesium.DistanceDisplayCondition(
               0,
               7_000_000
@@ -246,6 +260,27 @@ export default function CesiumViewer() {
           entity,
         });
       }
+
+      // ——————————————————
+      // Port clustering — collapse nearby dots at global zoom
+      // ——————————————————
+      portSource.clustering.enabled            = true;
+      portSource.clustering.pixelRange         = 30;
+      portSource.clustering.minimumClusterSize = 3;
+      portSource.clustering.clusterBillboards  = false;
+      portSource.clustering.clusterLabels      = false;
+      portSource.clustering.clusterPoints      = true;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      portSource.clustering.clusterEvent.addEventListener((entities: any[], cluster: any) => {
+        cluster.label.show      = false;
+        cluster.billboard.show  = false;
+        cluster.point.show      = true;
+        cluster.point.color     = Cesium.Color.fromCssColorString("#22d3ee").withAlpha(0.7);
+        cluster.point.pixelSize = Math.min(6 + entities.length * 0.5, 18);
+        cluster.point.outlineColor = Cesium.Color.fromCssColorString("#22d3ee").withAlpha(0.3);
+        cluster.point.outlineWidth = 3;
+      });
 
       // ——————————————————
       // Conflict events — pulsing severity-coded markers
@@ -324,6 +359,7 @@ export default function CesiumViewer() {
           chokepointSource.show = lv.chokepoints;
           conflictSource.show   = lv.conflicts;
           eezSource.show        = lv.eez;
+          viewer!.scene.requestRender();
         })
       );
 
@@ -353,30 +389,28 @@ export default function CesiumViewer() {
         })
       );
 
-      // Selection highlighting
-      let prevSelected = useAppStore.getState().selectedEntity;
+      // Selection highlighting — only touch the previously and newly selected entity.
+      let prevSelectedId: string | null = null;
       cleanupFns.push(
         useAppStore.subscribe((state) => {
           const selected = state.selectedEntity;
-          if (selected === prevSelected) return;
-          prevSelected = selected;
+          const newId = selected ? `${selected.type}:${selected.data.id}` : null;
+          if (newId === prevSelectedId) return;
 
-          // Reset all entities to base color.
-          for (const [, rec] of entityMap) {
-            applyColor(rec, Cesium.Color.fromCssColorString(rec.baseHex), Cesium);
+          // Reset only the previously highlighted entity.
+          if (prevSelectedId) {
+            const prev = entityMap.get(prevSelectedId);
+            if (prev) applyColor(prev, Cesium.Color.fromCssColorString(prev.baseHex), Cesium);
           }
 
-          if (!selected) return;
-
-          const entityId = `${selected.type}:${selected.data.id}`;
-          const rec = entityMap.get(entityId);
-          if (rec) {
-            applyColor(
-              rec,
-              Cesium.Color.fromCssColorString(SELECTED_HEX),
-              Cesium
-            );
+          // Highlight the new selection.
+          if (newId) {
+            const rec = entityMap.get(newId);
+            if (rec) applyColor(rec, Cesium.Color.fromCssColorString(SELECTED_HEX), Cesium);
           }
+
+          prevSelectedId = newId;
+          viewer!.scene.requestRender();
         })
       );
     })();
